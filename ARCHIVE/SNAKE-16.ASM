@@ -201,8 +201,7 @@ skip_tick:
     jmp render_sync
 
 do_tick_update:
-    mov al, byte ptr [tick_interval]
-    mov byte ptr [tick_counter], al  ; Reset countdown based on dynamic speed interval
+    mov byte ptr [tick_counter], 12  ; Slower speed (moves every 12 frames)
 
     ; Apply queued direction change
     mov ax, [next_dir_x]
@@ -326,24 +325,6 @@ grow_allowed:
     ; Increment Score & Update string
     inc word ptr [score]
     call update_score_str
-
-    ; Speed up snake every 10 points (Decrease tick interval by 5, minimum 15)
-    mov ax, [score]
-    xor dx, dx
-    mov bx, 10
-    div bx
-    cmp dx, 0
-    jne skip_speed_up
-    cmp ax, 0
-    je skip_speed_up
-
-    mov bx, [tick_interval]
-    cmp bx, 15
-    jle skip_speed_up
-    sub bx, 5
-    mov [tick_interval], bx
-
-skip_speed_up:
 
     ; Check and update high score
     mov ax, [score]
@@ -842,34 +823,8 @@ save_exit:
 save_hiscore endp
 
 ; -------------------------------------------------------------------------
-; GAME PROCEDURES & TIMING
+; GAME PROCEDURES
 ; -------------------------------------------------------------------------
-
-; Delay(milliseconds)
-; Stack parameters: [bp+4] = milliseconds (word)
-Delay proc
-    push bp
-    mov bp, sp
-    push ax
-    push bx
-    push cx
-    push dx
-
-    mov ax, [bp+4]     ; Get milliseconds
-    mov bx, 1000
-    mul bx             ; DX:AX = microseconds (ms * 1000)
-    mov cx, dx         ; CX:DX = microseconds for INT 15h AH=86h
-    mov dx, ax
-    mov ah, 86h
-    int 15h
-
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    pop bp
-    ret 2
-Delay endp
 
 spawn_food proc
     push ax
@@ -1063,8 +1018,7 @@ VWait endp
     old_tail_x      dw 0
     old_tail_y      dw 0
     
-    tick_interval   dw 60         ; Initial speed: 60 frames (~1 move per second at 60Hz)
-    tick_counter    db 60
+    tick_counter    db 12
 
     ; 8x8 Pixel Font Table (ASCII 32 ' ' to 90 'Z')
     font_table:
@@ -1074,7 +1028,7 @@ VWait endp
         REPT 15
         db 0,0,0,0,0,0,0,0
         ENDM
-        ; 48: '0'
+        ; 48: '0' (Fixed clean outline)
         db 3Ch,66h,66h,66h,66h,66h,3Ch,0
         ; 49: '1'
         db 18h,38h,18h,18h,18h,18h,7Eh,0
